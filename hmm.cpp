@@ -40,6 +40,22 @@
 #include "viterbi.cpp"
 #include "baum_welch.cpp"
 
+
+/* p7_LOGSUM_SCALE defines the precision of the calculation; the
+ * default of 1000.0 means rounding differences to the nearest 0.001
+ * nat. p7_LOGSUM_TBL defines the size of the lookup table; the
+ * default of 16000 means entries are calculated for differences of 0
+ * to 16.000 nats (when p7_LOGSUM_SCALE is 1000.0).  e^{-p7_LOGSUM_TBL /
+ * p7_LOGSUM_SCALE} should be on the order of the machine FLT_EPSILON,
+ * typically 1.2e-7.
+ *
+ * reference : 
+ * https://svn.janelia.org/eddylab/eddys/src/hmmer/tags/3.1b2/src/logsum.c
+ */
+#define p7_LOGSUM_SCALE 1000.f
+#define p7_LOGSUM_TBL   16000
+static float flogsum_lookup[p7_LOGSUM_TBL]; /* p7_LOGSUM_TBL=16000: (A-B) = 0..16 nats, steps of 0.001 */
+
 int nstates = 0;                /* number of states */
 int nobvs = 0;                  /* number of observations */
 int nseq = 0;                   /* number of data sequences  */
@@ -50,6 +66,12 @@ float *transT = NULL;           /* state transition probabilities */
 float *obvs = NULL;            /* output probabilities */
 float *obvsT = NULL;            /* output probabilities */
 int *data = NULL;
+
+void p7_FLogsumInit(void)
+{
+    for (int i = 0; i < p7_LOGSUM_TBL; i++) 
+        flogsum_lookup[i] = log(1. + exp((double) -i / p7_LOGSUM_SCALE));
+}
 
 int main(int argc, char *argv[])
 {
@@ -69,7 +91,8 @@ int main(int argc, char *argv[])
     float p;
     int i, j, k;
     opterr = 0;
-    
+
+    p7_FLogsumInit();
 
     while ((c = getopt(argc, argv, "c:n:hp:t:")) != -1) {
         switch (c) {
@@ -283,9 +306,9 @@ void init_count() {
 
 float logadd(float x, float y) {
     if (y <= x)
-        return x + log1pf(expf(y - x));
+        return (y == -INFINITY || (x-y) >= 15.7f) ? x : x + flogsum_lookup[(int)((x-y)*p7_LOGSUM_SCALE)];
     else
-        return y + log1pf(expf(x - y));
+        return (x == -INFINITY || (y-x) >= 15.7f) ? y : y + flogsum_lookup[(int)((y-x)*p7_LOGSUM_SCALE)];
 }
 
 void usage() {
