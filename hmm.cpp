@@ -224,7 +224,7 @@ int main(int argc, char *argv[])
     }
 
     if (mode == 3) {
-        baum_welch(data, nseq, iterations, length, nstates, nobvs, prior, transT, obvs);
+        baum_welch(data, nseq, iterations, length, nstates, nobvs, prior, trans, transT, obvs);
     } else if (mode == 2) {
         for (i = 0; i < nseq; i++) {
             viterbi(data + length * i, length, nstates, nobvs, prior, transT, obvs);
