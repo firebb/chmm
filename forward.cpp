@@ -24,7 +24,7 @@ float forward(int *data, int len, int nstates, int nobvs,
         /* forward pass */
         #pragma omp for
         for (int i = 0; i < nstates; i++) {
-            alpha[i] = prior[i] + obvs[IDXT(i,data[0],nobvs)];
+            alpha[i] = prior[i] + obvs[IDXT(i,data[0],nstates)];
         }
 
         __m256 result_AVX;
